@@ -1,0 +1,6 @@
+{
+    "token": "",
+    "username": "root",
+    "password": "",
+    "url": "jdbc:mysql://localhost:3306/discord_bot"
+}
