@@ -45,3 +45,9 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+*.xml
+.gradle/buildOutputCleanup/built.bin
+*.properties
+.gradle/buildOutputCleanup/cache.properties.lock
+.idea/modules/ormlite_test.iml
+*.iml

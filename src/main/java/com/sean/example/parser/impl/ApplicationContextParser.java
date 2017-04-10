@@ -11,6 +11,8 @@ import java.io.Reader;
 
 /**
  * @author Sean
+ *
+ * Parses the config.json file that contains the information to start the application.
  */
 public final class ApplicationContextParser implements Parser<ApplicationContext> {
 
