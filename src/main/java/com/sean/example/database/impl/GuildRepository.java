@@ -80,11 +80,11 @@ public final class GuildRepository extends Repository<Guild> {
         QueryBuilder<Account, Integer> accountQuery = databaseManager.getAccountDao().queryBuilder();
         accountQuery.selectColumns(DatabaseConstants.ID_TABLE_NAME).where().eq(DatabaseConstants.ACCOUNT_ID_NAME_COLUMN, accountIdArgument);
 
-        QueryBuilder<AccountGuild, Integer> accountDepartmentQuery = databaseManager.getAccountGuildDao().queryBuilder();
-        accountDepartmentQuery.selectColumns(DatabaseConstants.GUILD_ID_COLUMN).where().in(DatabaseConstants.ACCOUNT_ID_NAME_COLUMN, accountQuery);
+        QueryBuilder<AccountGuild, Integer> accountGuildQuery = databaseManager.getAccountGuildDao().queryBuilder();
+        accountGuildQuery.selectColumns(DatabaseConstants.GUILD_ID_COLUMN).where().in(DatabaseConstants.ACCOUNT_ID_NAME_COLUMN, accountQuery);
 
         QueryBuilder<Guild, Integer> departmentQuery = databaseManager.getGuildDao().queryBuilder();
-        departmentQuery.where().in(DatabaseConstants.ID_TABLE_NAME, accountDepartmentQuery);
+        departmentQuery.where().in(DatabaseConstants.ID_TABLE_NAME, accountGuildQuery);
 
         return departmentQuery.prepare();
     }

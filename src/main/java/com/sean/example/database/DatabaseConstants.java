@@ -6,12 +6,12 @@ package com.sean.example.database;
 public final class DatabaseConstants {
 
     /**
-     * The name of the department column.
+     * The name of the guild table.
      */
     public static final String GUILD_TABLE_NAME = "guilds";
 
     /**
-     * The name of the department column.
+     * The name of the name column.
      */
     public static final String NAME_COLUMN = "name";
 
