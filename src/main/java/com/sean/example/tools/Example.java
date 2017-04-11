@@ -7,7 +7,9 @@ import com.sean.example.model.Glyph;
 import com.sean.example.model.PlatformType;
 import com.sean.example.parser.impl.ApplicationContextParser;
 import io.reactivex.Flowable;
+import io.reactivex.annotations.NonNull;
 import io.reactivex.functions.Consumer;
+import io.reactivex.schedulers.Schedulers;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -44,11 +46,10 @@ public final class Example {
 
         String guildId = "95577356114075648";
 
-        Flowable<List<Glyph>> glyphList = glyphRepository.findGlyphsByPlatformAndGuildAsFlowable(PlatformType.XBOX, guildId);
+        Flowable<List<Glyph>> glyphList = glyphRepository.findAvailableGlyphsAsFlowable(PlatformType.PC, guildId);
         glyphList.subscribe(glyphs -> glyphs.forEach(glyph -> {
             System.out.println(glyph);
-        }));
-
+        }), throwable -> System.out.println(throwable.getMessage()));
     }
 
 }
