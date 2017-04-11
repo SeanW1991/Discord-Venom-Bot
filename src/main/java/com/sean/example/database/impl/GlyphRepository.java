@@ -7,13 +7,9 @@ import com.j256.ormlite.stmt.SelectArg;
 import com.sean.example.database.DatabaseConstants;
 import com.sean.example.database.DatabaseManager;
 import com.sean.example.database.Repository;
-import com.sean.example.model.Glyph;
-import com.sean.example.model.Guild;
-import com.sean.example.model.Platform;
-import com.sean.example.model.PlatformType;
+import com.sean.example.model.*;
 import io.reactivex.Flowable;
 
-import javax.xml.crypto.Data;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
@@ -107,11 +103,37 @@ public final class GlyphRepository extends Repository<Glyph> {
      * @throws SQLException The exception thrown if an sql error occurs.
      */
     public List<Glyph> findAvailableGlyphs(PlatformType type, String guildId) throws SQLException {
-        List<Glyph> glyphs = dao().query(queryAvailableGlyph(type, guildId));
+        List<Glyph> glyphs = dao().query(queryAvailableGlyphs(type, guildId));
         if(glyphs.isEmpty()) {
             throw new IllegalArgumentException(String.format(ERROR_NO_GLYPHS_AVAILABLE, type));
         }
         return glyphs;
+    }
+
+    /**
+     * Finds a {@link Glyph} assigned to an {@link Account} within a {@link Guild}.
+     * @param accountId The {@link String} account id.
+     * @param guildId The {@link String} guild id.
+     * @return The {@link List} of {@link Glyph}s owned by an {@link Account} within a {@link Guild}.
+     * @throws SQLException The exception thrown if an sql error occurs.
+     */
+    public List<Glyph> findGlyphsByAccount(String accountId, String guildId) throws SQLException {
+        List<Glyph> glyphs = dao().query(queryGlyphsByAccount(accountId, guildId));
+        if(glyphs.isEmpty()) {
+            throw new IllegalArgumentException();
+        }
+        return glyphs;
+    }
+
+    /**
+     * Finds a {@link Glyph} assigned to an {@link Account} within a {@link Guild} as a {@link Flowable}.
+     * @param accountId The {@link String} account id.
+     * @param guildId The {@link String} guild id.
+     * @return The {@link List} of {@link Glyph}s owned by an {@link Account} within a {@link Guild}.
+     * @throws SQLException The exception thrown if an sql error occurs.
+     */
+    public Flowable<List<Glyph>> findGlyphsByAccountAsFlowable(String accountId, String guildId) throws SQLException {
+        return Flowable.fromCallable(() -> findGlyphsByAccount(accountId, guildId));
     }
 
     /**
@@ -160,6 +182,7 @@ public final class GlyphRepository extends Repository<Glyph> {
         return databaseManager.getGlyphDao();
     }
 
+
     /**
      * The {@link PreparedQuery} to find all {@link Glyph}s based on the assigned {@link PlatformType}.
      * @param type The {@link PlatformType} of the {@link Glyph}s.
@@ -177,13 +200,49 @@ public final class GlyphRepository extends Repository<Glyph> {
          * The {@link QueryBuilder} for the querying of the platform based on the {@link PlatformType}.
          */
         QueryBuilder<Platform, Integer> platformQuery = databaseManager.getPlatformDao().queryBuilder();
-        platformQuery.selectColumns(DatabaseConstants.ID_TABLE_NAME).where().eq(DatabaseConstants.PLATFORM_COLUMN_NAME, platformTypeArgument);
+        platformQuery.where().eq(DatabaseConstants.PLATFORM_COLUMN_NAME, platformTypeArgument);
 
         /**
          * The {@link QueryBuilder} for finding all {@link Glyph}s based on the {@code platformQuery}.
          */
         QueryBuilder<Glyph, Integer> glyphQuery = databaseManager.getGlyphDao().queryBuilder();
-        glyphQuery.where().in(DatabaseConstants.PLATFORM_ID_NAME_COLUMN, platformQuery);
+        glyphQuery.join(platformQuery);
+
+        return glyphQuery.prepare();
+    }
+
+    /**
+     * The {@link PreparedQuery} for the querying of a {@link Glyph} based on the {@link Guild} and {@link Account}.
+     * @param accountId The {@link String} id of the {@link Account}.
+     * @param guildId The {@link String} id of the {@link Guild}.
+     * @return The {@link PreparedQuery} for the querying of all {@link Glyph}s assigned to an {@link Account} from a {@link Guild}.
+     * @throws SQLException The exception thrown if an sql error occurs.
+     */
+    private PreparedQuery<Glyph> queryGlyphsByAccount(String accountId, String guildId) throws SQLException {
+
+        /**
+         * The select arguments for the selecting of the guild and account.
+         */
+        SelectArg accountArgument = new SelectArg(DatabaseConstants.ACCOUNT_ID_NAME_COLUMN, accountId);
+        SelectArg guildArgument = new SelectArg(DatabaseConstants.GUILD_ID_COLUMN, guildId);
+
+        /**
+         * The {@link QueryBuilder} for the guild querying.
+         */
+        QueryBuilder<Guild, Integer> guildQuery = databaseManager.getGuildDao().queryBuilder();
+        guildQuery.where().eq(DatabaseConstants.GUILD_ID_COLUMN, guildArgument);
+
+        /**
+         * The {@link QueryBuilder} for the account querying.
+         */
+        QueryBuilder<Account, Integer> accountQuery = databaseManager.getAccountDao().queryBuilder();
+        accountQuery.where().eq(DatabaseConstants.ACCOUNT_ID_NAME_COLUMN, accountId);
+
+        /**
+         * The {@link QueryBuilder} for glyph querying by joining the guild query and the account query.
+         */
+        QueryBuilder<Glyph, Integer> glyphQuery = dao().queryBuilder();
+        glyphQuery.join(guildQuery).join(accountQuery);
 
         return glyphQuery.prepare();
     }
@@ -197,24 +256,23 @@ public final class GlyphRepository extends Repository<Glyph> {
      * the {@link PlatformType} and {@link Guild}.
      * @throws SQLException The exception thrown when an sql error occurs.
      */
-    private PreparedQuery<Glyph> queryAvailableGlyph(PlatformType type, String guildId) throws SQLException {
+    private PreparedQuery<Glyph> queryAvailableGlyphs(PlatformType type, String guildId) throws SQLException {
 
+        /**
+         * The select arguments for the selecting of both the platform and the guild.
+         */
         SelectArg platformTypeArgument = new SelectArg(DatabaseConstants.PLATFORM_COLUMN_NAME, type);
         SelectArg guildArgument = new SelectArg(DatabaseConstants.GUILD_ID_COLUMN, guildId);
 
         QueryBuilder<Guild, Integer> guildQuery = databaseManager.getGuildDao().queryBuilder();
-        guildQuery.selectColumns(DatabaseConstants.ID_TABLE_NAME).where().eq(DatabaseConstants.GUILD_ID_COLUMN, guildArgument);
+        guildQuery.where().eq(DatabaseConstants.GUILD_ID_COLUMN, guildArgument);
 
         QueryBuilder<Platform, Integer> platformQuery = databaseManager.getPlatformDao().queryBuilder();
-        platformQuery.selectColumns(DatabaseConstants.ID_TABLE_NAME).where().eq(DatabaseConstants.PLATFORM_COLUMN_NAME, platformTypeArgument);
-
+        platformQuery.where().eq(DatabaseConstants.PLATFORM_COLUMN_NAME, platformTypeArgument);
 
         QueryBuilder<Glyph, Integer> glyphQuery = dao().queryBuilder();
 
-        glyphQuery.where()
-                .in(DatabaseConstants.GUILD_ID_COLUMN, guildQuery)
-                .and().in(DatabaseConstants.PLATFORM_ID_NAME_COLUMN, platformQuery)
-                .and().isNull(DatabaseConstants.ACCOUNT_ID_NAME_COLUMN);
+        glyphQuery.join(guildQuery).join(platformQuery).where().isNull(DatabaseConstants.ACCOUNT_ID_NAME_COLUMN);
 
         return glyphQuery.prepare();
 
@@ -237,13 +295,13 @@ public final class GlyphRepository extends Repository<Glyph> {
          * The {@link QueryBuilder} for the guild to select the column of a guild based on the guild id.
          */
         QueryBuilder<Guild, Integer> guildQuery = databaseManager.getGuildDao().queryBuilder();
-        guildQuery.selectColumns(DatabaseConstants.ID_TABLE_NAME).where().eq(DatabaseConstants.GUILD_ID_COLUMN, guildIdArgument);
+        guildQuery.where().eq(DatabaseConstants.GUILD_ID_COLUMN, guildIdArgument);
 
         /**
          * The {@link QueryBuilder} for the selecting of a glyph based on the guild they are assigned to.
          */
         QueryBuilder<Glyph, Integer> glyphQuery = databaseManager.getGlyphDao().queryBuilder();
-        glyphQuery.where().in(DatabaseConstants.GUILD_ID_COLUMN, guildQuery);
+        glyphQuery.join(guildQuery);
 
         return glyphQuery.prepare();
     }
@@ -267,19 +325,19 @@ public final class GlyphRepository extends Repository<Glyph> {
          * The {@link QueryBuilder} for the querying of the platform based on the {@link PlatformType}.
          */
         QueryBuilder<Guild, Integer> guildQuery = databaseManager.getGuildDao().queryBuilder();
-        guildQuery.selectColumns(DatabaseConstants.ID_TABLE_NAME).where().eq(DatabaseConstants.GUILD_ID_COLUMN, guildArgument);
+        guildQuery.where().eq(DatabaseConstants.GUILD_ID_COLUMN, guildArgument);
 
         /**
          * The {@link QueryBuilder} for the querying of the platform based on the {@link PlatformType}.
          */
         QueryBuilder<Platform, Integer> platformQuery = databaseManager.getPlatformDao().queryBuilder();
-        platformQuery.selectColumns(DatabaseConstants.ID_TABLE_NAME).where().eq(DatabaseConstants.PLATFORM_COLUMN_NAME, platformTypeArgument);
+        platformQuery.where().eq(DatabaseConstants.PLATFORM_COLUMN_NAME, platformTypeArgument);
 
         /**
          * The {@link QueryBuilder} for finding all {@link Glyph}s based on the {@code platformQuery} and the {@code guildQuery).
          */
         QueryBuilder<Glyph, Integer> glyphQuery = databaseManager.getGlyphDao().queryBuilder();
-        glyphQuery.where().in(DatabaseConstants.PLATFORM_ID_NAME_COLUMN, platformQuery).and().in(DatabaseConstants.GUILD_ID_COLUMN, guildQuery);
+        glyphQuery.join(platformQuery).join(guildQuery);
 
         return glyphQuery.prepare();
     }

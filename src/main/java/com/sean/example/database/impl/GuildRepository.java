@@ -15,7 +15,6 @@ import io.reactivex.Flowable;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.Callable;
 
 /**
  * Created by sean on 10/04/2017.
@@ -78,15 +77,15 @@ public final class GuildRepository extends Repository<Guild> {
         SelectArg accountIdArgument = new SelectArg(DatabaseConstants.ACCOUNT_ID_NAME_COLUMN, userId);
 
         QueryBuilder<Account, Integer> accountQuery = databaseManager.getAccountDao().queryBuilder();
-        accountQuery.selectColumns(DatabaseConstants.ID_TABLE_NAME).where().eq(DatabaseConstants.ACCOUNT_ID_NAME_COLUMN, accountIdArgument);
+        accountQuery.where().eq(DatabaseConstants.ACCOUNT_ID_NAME_COLUMN, accountIdArgument);
 
         QueryBuilder<AccountGuild, Integer> accountGuildQuery = databaseManager.getAccountGuildDao().queryBuilder();
-        accountGuildQuery.selectColumns(DatabaseConstants.GUILD_ID_COLUMN).where().in(DatabaseConstants.ACCOUNT_ID_NAME_COLUMN, accountQuery);
+        accountGuildQuery.where().in(DatabaseConstants.ACCOUNT_ID_NAME_COLUMN, accountQuery);
 
-        QueryBuilder<Guild, Integer> departmentQuery = databaseManager.getGuildDao().queryBuilder();
-        departmentQuery.where().in(DatabaseConstants.ID_TABLE_NAME, accountGuildQuery);
+        QueryBuilder<Guild, Integer> guildQuery = databaseManager.getGuildDao().queryBuilder();
+        guildQuery.join(accountGuildQuery);
 
-        return departmentQuery.prepare();
+        return guildQuery.prepare();
     }
 
     /**
@@ -99,7 +98,7 @@ public final class GuildRepository extends Repository<Guild> {
         SelectArg guildIdArgument = new SelectArg(DatabaseConstants.GUILD_ID_COLUMN, guildId);
 
         QueryBuilder<Guild, Integer> guildQuery = databaseManager.getGuildDao().queryBuilder();
-        guildQuery.where().in(DatabaseConstants.GUILD_ID_COLUMN, guildIdArgument);
+        guildQuery.where().eq(DatabaseConstants.GUILD_ID_COLUMN, guildIdArgument);
 
         return guildQuery.prepare();
     }

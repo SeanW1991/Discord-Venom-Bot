@@ -46,6 +46,8 @@ public final class Example {
 
         String guildId = "95577356114075648";
 
+        String accountId = "211185924544004096";
+
         Flowable<List<Glyph>> glyphList = glyphRepository.findAvailableGlyphsAsFlowable(PlatformType.PC, guildId);
         glyphList.subscribe(glyphs -> glyphs.forEach(glyph -> {
             System.out.println(glyph);
